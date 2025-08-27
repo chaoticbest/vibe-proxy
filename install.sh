@@ -63,6 +63,21 @@ if ! command -v docker >/dev/null 2>&1; then
   sudo systemctl enable --now docker
 fi
 
+# --- Choose a docker command we can run now ---
+DOCKER="docker"
+if ! docker info >/dev/null 2>&1; then
+  if sudo -n docker info >/dev/null 2>&1; then
+    DOCKER="sudo docker"
+    echo "Using sudo for Docker commands in this session."
+  else
+    echo "Adding $USER to the docker group..."
+    sudo usermod -aG docker "$USER" || true
+    echo "You need a new shell (or re-run the script) for group changes to apply."
+    echo "Exiting safely."
+    exit 1
+  fi
+fi
+
 # ------------------
 # Folders & network
 # ------------------
@@ -71,7 +86,7 @@ sudo touch /srv/vibes/proxy/letsencrypt/acme.json
 sudo chmod 600 /srv/vibes/proxy/letsencrypt/acme.json
 sudo chown -R "$USER":"$USER" /srv/vibes
 
-docker network ls | grep -q vibes_net || docker network create vibes_net
+$DOCKER network ls | grep -q vibes_net || $DOCKER network create vibes_net
 
 # Save .env (informational; compose uses inline labels)
 cat >/srv/vibes/proxy/.env <<ENV
@@ -178,7 +193,7 @@ else
   git -C /srv/vibes/hub pull --ff-only
 fi
 
-docker build -t vibe-hub:latest /srv/vibes/hub
+$DOCKER build -t vibe-hub:latest /srv/vibes/hub
 
 # ------------------
 # Bring up the stack
@@ -187,9 +202,9 @@ cd /srv/vibes/proxy
 require_cmd docker
 require_cmd docker-compose || true
 
-docker compose up -d
+$DOCKER compose up -d
 sleep 2
-docker compose ps
+$DOCKER compose ps
 
 # ------------------
 # Install pipx + vibe CLI
