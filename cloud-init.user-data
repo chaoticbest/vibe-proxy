@@ -1,0 +1,6 @@
+#cloud-config
+package_update: true
+runcmd:
+  - bash -lc 'curl -fsSL https://raw.githubusercontent.com/chaoticbest/vibe-proxy/main/install.sh -o /root/install.sh'
+  - bash -lc 'chmod +x /root/install.sh'
+  - bash -lc '/root/install.sh -d vibes.chaoticbest.com -e you@chaoticbest.com -h https://github.com/chaoticbest/vibes-hub.git -c https://github.com/chaoticbest/vibe-cli.git'

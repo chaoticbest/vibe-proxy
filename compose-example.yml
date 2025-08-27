@@ -1,0 +1,58 @@
+version: "3.9"
+networks:
+  vibes_net:
+    external: true
+services:
+  traefik:
+    image: traefik:v3.1
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --accesslog=true
+    ports: ["80:80", "443:443"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /srv/vibes/proxy/letsencrypt:/letsencrypt
+    networks: [vibes_net]
+    labels: ["traefik.enable=true"]
+
+  static:
+    image: caddy:2
+    restart: unless-stopped
+    command: caddy file-server --root /srv/static
+    volumes: ["/srv/vibes/static:/srv/static:ro"]
+    networks: [vibes_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.middlewares.addslash.redirectregex.regex=^/app/([^/]+)$
+      - traefik.http.middlewares.addslash.redirectregex.replacement=/app/$1/
+      - traefik.http.middlewares.addslash.redirectregex.permanent=true
+      - traefik.http.middlewares.static-strip.stripprefix.prefixes=/app
+      - traefik.http.middlewares.compress.compress=true
+      - traefik.http.routers.static-http.rule=PathPrefix(`/app/`)
+      - traefik.http.routers.static-http.entrypoints=web
+      - traefik.http.routers.static-http.priority=10
+      - traefik.http.routers.static-http.middlewares=addslash,static-strip,compress
+
+  hub:
+    image: vibes-hub:latest
+    restart: unless-stopped
+    environment:
+      - PORT=8080
+      - REGISTRY_PATH=/data/registry/apps.json
+    volumes: ["/srv/vibes/registry:/data/registry:ro"]
+    networks: [vibes_net]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.hub-http.rule=PathPrefix(`/`)
+      - traefik.http.routers.hub-http.entrypoints=web
+      - traefik.http.routers.hub-http.priority=1
+      - traefik.http.routers.hub-http.middlewares=compress
+      - traefik.http.middlewares.compress.compress=true
