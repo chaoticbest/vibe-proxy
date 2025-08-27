@@ -78,6 +78,24 @@ if ! docker info >/dev/null 2>&1; then
   fi
 fi
 
+# --- Pick a Compose command (v2 preferred) ---
+COMPOSE="$DOCKER compose"
+if ! $DOCKER compose version >/dev/null 2>&1; then
+  if command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE="docker-compose"
+    echo "Using docker-compose (v1) for this session."
+  else
+    echo "Installing Docker Compose v2 plugin..."
+    sudo apt-get install -y docker-compose-plugin
+    if $DOCKER compose version >/dev/null 2>&1; then
+      COMPOSE="$DOCKER compose"
+    else
+      echo "ERROR: Docker Compose not available after install." >&2
+      exit 1
+    fi
+  fi
+fi
+
 # ------------------
 # Folders & network
 # ------------------
@@ -200,11 +218,10 @@ $DOCKER build -t vibe-hub:latest /srv/vibes/hub
 # ------------------
 cd /srv/vibes/proxy
 require_cmd docker
-require_cmd docker-compose || true
 
-$DOCKER compose up -d
+$COMPOSE up -d
 sleep 2
-$DOCKER compose ps
+$COMPOSE ps
 
 # ------------------
 # Install pipx + vibe CLI
