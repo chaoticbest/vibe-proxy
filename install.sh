@@ -6,7 +6,7 @@ set -euo pipefail
 # ------------------
 DOMAIN=""           # e.g., vibes.chaoticbest.com (optional)
 EMAIL=""            # ACME email (optional, used if DOMAIN set)
-HUB_REPO="https://github.com/chaoticbest/vibes-hub.git"
+HUB_REPO="https://github.com/chaoticbest/vibe-hub.git"
 CLI_REPO="https://github.com/chaoticbest/vibe-cli.git"
 
 usage() {
@@ -144,7 +144,7 @@ services:
       - traefik.http.routers.static-https.middlewares=addslash,static-strip,compress
 
   hub:
-    image: vibes-hub:latest
+    image: vibe-hub:latest
     restart: unless-stopped
     environment:
       - PORT=8080
@@ -178,7 +178,7 @@ else
   git -C /srv/vibes/hub pull --ff-only
 fi
 
-docker build -t vibes-hub:latest /srv/vibes/hub
+docker build -t vibe-hub:latest /srv/vibes/hub
 
 # ------------------
 # Bring up the stack
