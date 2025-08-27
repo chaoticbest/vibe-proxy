@@ -112,6 +112,37 @@ DOMAIN=${DOMAIN}
 ACME_EMAIL=${EMAIL}
 ENV
 
+# --- Compute BASE_URL and persist it ---
+# Sanitize the domain if provided (strip scheme/trailing slash)
+DOMAIN_CLEAN="$(echo -n "$DOMAIN" | sed -E 's#^https?://##; s#/$##')"
+
+if [ -n "$DOMAIN_CLEAN" ]; then
+  BASE_URL="https://${DOMAIN_CLEAN}"
+else
+  # best-effort local IP (no external dependency required)
+  IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+  if [ -z "$IP" ]; then IP=$(curl -sS ifconfig.me || echo "localhost"); fi
+  BASE_URL="http://${IP}"
+fi
+
+# Save to the proxy .env (alongside DOMAIN/ACME_EMAIL)
+cat >/srv/vibes/proxy/.env <<ENV
+DOMAIN=${DOMAIN_CLEAN}
+ACME_EMAIL=${EMAIL}
+VIBES_BASE_URL=${BASE_URL}
+ENV
+
+# Export for the current shell so vibe works immediately
+export VIBES_BASE_URL="${BASE_URL}"
+
+# Persist for future shells (system-wide)
+sudo tee /etc/profile.d/vibes-base-url.sh >/dev/null <<EOF
+# Set by vibe-proxy installer
+export VIBES_BASE_URL="${BASE_URL}"
+EOF
+sudo chmod 644 /etc/profile.d/vibes-base-url.sh
+
+
 # ------------------
 # Compose file (Traefik + Static + Hub)
 # ------------------
