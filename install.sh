@@ -92,7 +92,7 @@ $DOCKER network ls | grep -q vibes_net || $DOCKER network create vibes_net
 cat >/srv/vibes/proxy/.env <<ENV
 DOMAIN=${DOMAIN}
 ACME_EMAIL=${EMAIL}
-ENVd
+ENV
 
 # ------------------
 # Compose file (Traefik + Static + Hub)
